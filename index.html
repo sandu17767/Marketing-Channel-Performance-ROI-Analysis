@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marketing Channel Performance & ROI | GA Merchandise Store</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0d1117; --card: #161b22; --border: #30363d;
+      --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff;
+      --green: #3fb950; --red: #f85149; --amber: #d29922; --blue: #388bfd; --purple: #a371f7;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:var(--bg); color:var(--text); }
+
+    /* HEADER */
+    header { background:var(--card); border-bottom:1px solid var(--border); padding:18px 36px; display:flex; align-items:center; justify-content:space-between; }
+    header h1 { font-size:1.15rem; font-weight:700; }
+    header p  { color:var(--muted); font-size:0.78rem; margin-top:3px; }
+    .header-badge { background:rgba(88,166,255,0.12); border:1px solid rgba(88,166,255,0.3); color:var(--accent); font-size:0.72rem; padding:3px 10px; border-radius:20px; white-space:nowrap; }
+
+    /* KPI BAR */
+    .kpi-bar { display:grid; grid-template-columns:repeat(5,1fr); background:var(--card); border-bottom:1px solid var(--border); }
+    .kpi { padding:14px 20px; border-right:1px solid var(--border); text-align:center; }
+    .kpi:last-child { border-right:none; }
+    .kpi .val { font-size:1.5rem; font-weight:700; }
+    .kpi .lbl { font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
+    .kpi .sub { font-size:0.7rem; color:var(--muted); margin-top:3px; }
+    .kpi .benchmark { font-size:0.68rem; color:var(--amber); margin-top:2px; }
+
+    /* NAV */
+    nav { background:var(--card); border-bottom:1px solid var(--border); padding:0 36px; display:flex; overflow-x:auto; }
+    nav button { background:none; border:none; color:var(--muted); padding:11px 18px; cursor:pointer; font-size:0.83rem; border-bottom:2px solid transparent; transition:all .15s; white-space:nowrap; }
+    nav button:hover { color:var(--text); }
+    nav button.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+
+    /* MAIN */
+    .main { padding:28px 36px; }
+    .tab-content { display:none; }
+    .tab-content.active { display:block; }
+
+    /* GRIDS */
+    .g2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; }
+    .g3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; margin-bottom:20px; }
+    .g4 { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:20px; }
+    .full { grid-column:1/-1; }
+
+    /* CARDS */
+    .card { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:20px; margin-bottom:20px; }
+    .card h3 { font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-bottom:14px; }
+    .card.no-mb { margin-bottom:0; }
+
+    /* CHARTS */
+    .ch { position:relative; height:260px; }
+    .ch-lg { position:relative; height:320px; }
+    .ch-sm { position:relative; height:220px; }
+
+    /* INSIGHT BOXES */
+    .insight { border-radius:6px; padding:10px 14px; margin-top:14px; font-size:0.79rem; line-height:1.65; color:var(--muted); }
+    .insight strong { color:var(--text); }
+    .insight.info  { background:rgba(88,166,255,.07);  border:1px solid rgba(88,166,255,.2); }
+    .insight.warn  { background:rgba(210,153,34,.07);  border:1px solid rgba(210,153,34,.2); }
+    .insight.good  { background:rgba(63,185,80,.07);   border:1px solid rgba(63,185,80,.2); }
+    .insight.bad   { background:rgba(248,81,73,.07);   border:1px solid rgba(248,81,73,.2); }
+
+    /* TABLES */
+    table { width:100%; border-collapse:collapse; font-size:0.79rem; }
+    thead th { text-align:left; padding:7px 10px; color:var(--muted); font-size:0.69rem; text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border); font-weight:500; }
+    tbody td { padding:9px 10px; border-bottom:1px solid rgba(48,54,61,.5); }
+    tbody tr:hover { background:rgba(255,255,255,.03); }
+    tbody tr:last-child td { border-bottom:none; }
+    td.pos { color:var(--green); font-weight:600; }
+    td.neg { color:var(--red); font-weight:600; }
+    td.hi  { color:var(--green); font-weight:700; }
+    td.lo  { color:var(--red); }
+
+    /* BADGES */
+    .b { display:inline-block; padding:2px 7px; border-radius:10px; font-size:0.67rem; font-weight:600; }
+    .b-g { background:rgba(63,185,80,.15);   color:#3fb950; }
+    .b-b { background:rgba(56,139,253,.15);  color:#388bfd; }
+    .b-y { background:rgba(210,153,34,.15);  color:#d29922; }
+    .b-r { background:rgba(248,81,73,.15);   color:#f85149; }
+
+    /* DOTS */
+    .dot { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+
+    /* PRIORITY CARDS (ROI tab) */
+    .pri-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:20px; }
+    .pri { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:16px; }
+    .pri.p  { border-top:3px solid var(--green); }
+    .pri.g  { border-top:3px solid var(--blue); }
+    .pri.i  { border-top:3px solid var(--amber); }
+    .pri.c  { border-top:3px solid var(--red); }
+    .pri h4 { font-size:0.68rem; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin-bottom:6px; }
+    .pri .ch-name { font-size:.875rem; font-weight:700; margin-bottom:6px; }
+    .pri .ch-act  { font-size:.73rem; color:var(--muted); line-height:1.55; }
+
+    /* OPPORTUNITY BOXES */
+    .opp-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:16px; }
+    .opp { background:rgba(63,185,80,.07); border:1px solid rgba(63,185,80,.2); border-radius:6px; padding:12px 14px; }
+    .opp .amt { font-size:1.2rem; font-weight:700; color:var(--green); }
+    .opp .desc { font-size:.72rem; color:var(--muted); margin-top:4px; line-height:1.5; }
+
+    /* RECOMMENDATION PANEL */
+    .rec { background:var(--card); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:8px; padding:20px 24px; margin-top:20px; font-size:.82rem; line-height:1.7; }
+    .rec h3 { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--accent); margin-bottom:10px; }
+
+    /* FOOTER */
+    footer { text-align:center; padding:24px; color:var(--muted); font-size:.72rem; border-top:1px solid var(--border); margin-top:8px; }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width:6px; height:6px; }
+    ::-webkit-scrollbar-track { background:var(--bg); }
+    ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div>
+    <h1>📊 Marketing Channel Performance &amp; ROI Analysis</h1>
+    <p>Google Analytics Merchandise Store · BigQuery Public Dataset · Aug 2016 – Aug 2017</p>
+  </div>
+  <span class="header-badge">Built by Sanduni K. · E-Commerce Analytics Portfolio</span>
+</header>
+
+<!-- KPI BAR -->
+<div class="kpi-bar">
+  <div class="kpi">
+    <div class="val">903,653</div>
+    <div class="lbl">Total Sessions</div>
+    <div class="sub">8 channels · 12 months</div>
+  </div>
+  <div class="kpi">
+    <div class="val">$1.54M</div>
+    <div class="lbl">Total Revenue</div>
+    <div class="sub">12,115 transactions</div>
+  </div>
+  <div class="kpi">
+    <div class="val" style="color:var(--amber)">1.34%</div>
+    <div class="lbl">Conversion Rate</div>
+    <div class="benchmark">⚠ Below 2–4% benchmark</div>
+  </div>
+  <div class="kpi">
+    <div class="val" style="color:var(--green)">Referral</div>
+    <div class="lbl">Top Revenue Channel</div>
+    <div class="sub">42.3% of total revenue</div>
+  </div>
+  <div class="kpi">
+    <div class="val" style="color:var(--green)">Display</div>
+    <div class="lbl">Highest RPS Channel</div>
+    <div class="sub">$12.51 per session</div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <button class="active" onclick="showTab('overview')">📈 Overview</button>
+  <button onclick="showTab('trends')">📅 Monthly Trends</button>
+  <button onclick="showTab('devices')">📱 Device Breakdown</button>
+  <button onclick="showTab('sources')">🔗 Source Analysis</button>
+  <button onclick="showTab('geo')">🌍 Geography</button>
+  <button onclick="showTab('roi')">🏆 ROI Scorecard</button>
+</nav>
+
+<div class="main">
+
+  <!-- =================== TAB 1: OVERVIEW =================== -->
+  <div id="tab-overview" class="tab-content active">
+
+    <div class="g2">
+      <div class="card no-mb">
+        <h3>Revenue by Channel ($)</h3>
+        <div class="ch"><canvas id="revenueChart"></canvas></div>
+        <div class="insight info">
+          <strong>Referral generates 42.3% of revenue from just 11.6% of sessions.</strong>
+          Social generates 0.3% of revenue from 25% of sessions.
+          This sessions–revenue imbalance is the central finding of the analysis.
+        </div>
+      </div>
+      <div class="card no-mb">
+        <h3>Conversion Rate by Channel (2% Benchmark)</h3>
+        <div class="ch"><canvas id="crChart"></canvas></div>
+        <div class="insight warn">
+          Only <strong>Referral (5.29%)</strong> and <strong>Display (2.43%)</strong> exceed the 2% industry benchmark.
+          Social (0.06%) and Affiliates (0.05%) drag the site average to 1.34%.
+        </div>
+      </div>
+    </div>
+
+    <div class="g2">
+      <div class="card no-mb">
+        <h3>Revenue Per Session — Efficiency Ranking ($)</h3>
+        <div class="ch"><canvas id="rpsChart"></canvas></div>
+        <div class="insight good">
+          <strong>Display generates $12.51 per session — 7.3× the site average of $1.70</strong> — from fewer than 6,300 sessions.
+          The clearest underleveraged opportunity in the dataset.
+        </div>
+      </div>
+      <div class="card no-mb">
+        <h3>Sessions vs Revenue Share Gap (percentage points)</h3>
+        <div class="ch"><canvas id="gapChart"></canvas></div>
+        <div class="insight bad">
+          <strong>Social: −24.7pt gap.</strong> Referral: <strong>+30.7pt gap.</strong>
+          A positive gap means a channel earns more than its session share — the target state.
+          Any channel with a large negative gap is sending visitors who will never buy.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Full Channel Performance Table</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Channel</th><th>Sessions</th><th>Sessions %</th><th>CR%</th>
+            <th>Revenue</th><th>Revenue %</th><th>RPS</th><th>AOV</th><th>Bounce%</th><th>Gap</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="dot" style="background:var(--green)"></span>Referral</td><td>104,838</td><td>11.6%</td><td class="hi">5.29%</td><td>$651,430</td><td>42.3%</td><td class="hi">$6.21</td><td>$117.52</td><td>25.98%</td><td class="pos">+30.7pts</td></tr>
+          <tr><td><span class="dot" style="background:var(--accent)"></span>Direct</td><td>143,026</td><td>15.8%</td><td>1.55%</td><td>$434,841</td><td>28.2%</td><td>$3.04</td><td class="hi">$195.96</td><td>49.56%</td><td class="pos">+12.4pts</td></tr>
+          <tr><td><span class="dot" style="background:var(--amber)"></span>Organic Search</td><td>381,561</td><td>42.2%</td><td>0.94%</td><td>$326,381</td><td>21.2%</td><td>$0.86</td><td>$91.14</td><td>48.32%</td><td class="neg">−21.0pts</td></tr>
+          <tr><td><span class="dot" style="background:var(--purple)"></span>Display</td><td>6,262</td><td>0.7%</td><td class="hi">2.43%</td><td>$78,337</td><td>5.1%</td><td class="hi">$12.51</td><td class="hi">$515.38</td><td>35.87%</td><td class="pos">+4.4pts</td></tr>
+          <tr><td><span class="dot" style="background:var(--blue)"></span>Paid Search</td><td>25,326</td><td>2.8%</td><td>1.89%</td><td>$43,559</td><td>2.8%</td><td>$1.72</td><td>$90.94</td><td>38.01%</td><td>0pts</td></tr>
+          <tr><td><span class="dot" style="background:var(--red)"></span>Social</td><td>226,117</td><td>25.0%</td><td class="lo">0.06%</td><td>$4,917</td><td>0.3%</td><td class="lo">$0.02</td><td>$37.53</td><td>65.24%</td><td class="neg">−24.7pts</td></tr>
+          <tr><td><span class="dot" style="background:#8b949e"></span>Affiliates</td><td>16,403</td><td>1.8%</td><td class="lo">0.05%</td><td>$597</td><td>0.04%</td><td class="lo">$0.04</td><td>$66.38</td><td>53.05%</td><td class="neg">−1.76pts</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- =================== TAB 2: TRENDS =================== -->
+  <div id="tab-trends" class="tab-content">
+
+    <div class="card">
+      <h3>Monthly Conversion Rate Trend — Top Channels</h3>
+      <div class="ch-lg"><canvas id="trendCRChart"></canvas></div>
+      <div class="insight bad">
+        <strong>Organic Search is in structural decline.</strong> Sessions grew 56% over 12 months while CR fell 54% (1.53% → 0.71%).
+        Revenue peaked in August 2016 and never recovered. The SEO programme is ranking for more queries — but those queries are increasingly non-commercial.
+        Without a content strategy reset toward transactional intent, this gap will continue widening.
+      </div>
+    </div>
+
+    <div class="g2">
+      <div class="card no-mb">
+        <h3>Monthly Revenue — Referral vs Organic Search ($)</h3>
+        <div class="ch"><canvas id="trendRevenueChart"></canvas></div>
+        <div class="insight info">
+          <strong>Referral peaked at $79,775 in December 2016</strong> and never dropped below 3.82% CR in any month.
+          Organic peaked August 2016 and declined despite growing session volume.
+        </div>
+      </div>
+      <div class="card no-mb">
+        <h3>Paid Search CR% — Improving Trend</h3>
+        <div class="ch"><canvas id="paidTrendChart"></canvas></div>
+        <div class="insight good">
+          Paid Search CR reached <strong>2.52% in July 2017</strong> — above the 2% benchmark for the first time.
+          An improving trend at the moment a channel is identified as underfunded is the signal to increase budget before efficiency plateaus.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Organic Search: Sessions Growing, Efficiency Declining</h3>
+      <div class="ch"><canvas id="organicDualChart"></canvas></div>
+      <div class="insight bad">
+        This is the most dangerous pattern in marketing analytics: traffic scaling while quality declines.
+        Each new session added is worth less than the last. <strong>$364,000 in incremental revenue is available without acquiring a single new visitor</strong> — only by improving what happens after arrival.
+      </div>
+    </div>
+  </div>
+
+  <!-- =================== TAB 3: DEVICES =================== -->
+  <div id="tab-devices" class="tab-content">
+
+    <div class="card">
+      <h3>Desktop vs Mobile Conversion Rate by Channel (%)</h3>
+      <div class="ch-lg"><canvas id="deviceCRChart"></canvas></div>
+      <div class="insight bad">
+        <strong>Referral's mobile penalty: −96%.</strong> Desktop converts at 5.58%; mobile at 0.20%.
+        However, 95% of Referral sessions are already desktop — the headline 5.29% CR is genuine.
+        Any new partnership strategy driving mobile-heavy traffic will see dramatically lower performance than the headline average suggests.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Full Device Breakdown</h3>
+      <table>
+        <thead>
+          <tr><th>Channel</th><th>Device</th><th>Sessions</th><th>CR%</th><th>Revenue</th><th>RPS</th><th>Bounce%</th><th>Mobile % of Channel</th></tr>
+        </thead>
+        <tbody>
+          <tr><td rowspan="2"><span class="dot" style="background:var(--green)"></span>Referral</td><td>🖥 Desktop</td><td>99,149</td><td class="hi">5.58%</td><td>$650,517</td><td class="hi">$6.56</td><td>24.96%</td><td rowspan="2" style="color:var(--amber)">4.8% mobile</td></tr>
+          <tr style="background:rgba(248,81,73,.04)"><td>📱 Mobile</td><td>5,032</td><td class="lo">0.20%</td><td>$698</td><td class="lo">$0.14</td><td>44.00%</td></tr>
+          <tr><td rowspan="2"><span class="dot" style="background:var(--purple)"></span>Display</td><td>🖥 Desktop</td><td>4,565</td><td>3.11%</td><td>$77,542</td><td class="hi">$16.99</td><td>33.36%</td><td rowspan="2" style="color:var(--amber)">24.6% mobile</td></tr>
+          <tr style="background:rgba(248,81,73,.04)"><td>📱 Mobile</td><td>1,538</td><td>0.65%</td><td>$796</td><td>$0.52</td><td>41.68%</td></tr>
+          <tr><td rowspan="2"><span class="dot" style="background:var(--accent)"></span>Direct</td><td>🖥 Desktop</td><td>88,109</td><td>2.22%</td><td>$409,271</td><td>$4.65</td><td>45.48%</td><td rowspan="2" style="color:var(--amber)">34.6% mobile</td></tr>
+          <tr style="background:rgba(248,81,73,.04)"><td>📱 Mobile</td><td>49,537</td><td>0.46%</td><td>$24,282</td><td>$0.49</td><td>56.67%</td></tr>
+          <tr><td rowspan="2"><span class="dot" style="background:var(--blue)"></span>Paid Search</td><td>🖥 Desktop</td><td>12,674</td><td>2.91%</td><td>$37,030</td><td>$2.92</td><td>32.80%</td><td rowspan="2" style="color:var(--amber)">41.6% mobile</td></tr>
+          <tr style="background:rgba(248,81,73,.04)"><td>📱 Mobile</td><td>10,546</td><td>0.88%</td><td>$4,741</td><td>$0.45</td><td>42.41%</td></tr>
+          <tr><td rowspan="2"><span class="dot" style="background:var(--amber)"></span>Organic</td><td>🖥 Desktop</td><td>245,764</td><td>1.20%</td><td>$301,294</td><td>$1.23</td><td>47.85%</td><td rowspan="2" style="color:var(--amber)">30.8% mobile</td></tr>
+          <tr style="background:rgba(248,81,73,.04)"><td>📱 Mobile</td><td>117,635</td><td>0.44%</td><td>$19,069</td><td>$0.16</td><td>49.61%</td></tr>
+          <tr><td rowspan="2"><span class="dot" style="background:var(--red)"></span>Social</td><td>🖥 Desktop</td><td>199,305</td><td class="lo">0.06%</td><td>$4,627</td><td class="lo">$0.02</td><td>65.70%</td><td rowspan="2" style="color:var(--amber)">10.2% mobile</td></tr>
+          <tr style="background:rgba(248,81,73,.04)"><td>📱 Mobile</td><td>23,040</td><td class="lo">0.02%</td><td>$176</td><td class="lo">$0.01</td><td>61.18%</td></tr>
+        </tbody>
+      </table>
+      <div class="insight bad">
+        <strong>Social fails on every device</strong> — Desktop: 0.06%, Mobile: 0.02%. Both are functionally zero.
+        This rules out UX friction as the root cause. No mobile optimisation programme will fix a channel that has zero purchase intent on either device.
+      </div>
+    </div>
+  </div>
+
+  <!-- =================== TAB 4: SOURCES =================== -->
+  <div id="tab-sources" class="tab-content">
+
+    <div class="g2">
+      <div class="card no-mb">
+        <h3>🔴 Social Sessions: YouTube vs Everything Else</h3>
+        <div class="ch-sm"><canvas id="ytPieChart"></canvas></div>
+        <div class="insight bad">
+          <strong>YouTube = 94% of Social sessions. $314 annual revenue.</strong>
+          $0.0015 per session. This is not a Social strategy problem — it is a YouTube measurement problem.
+        </div>
+      </div>
+      <div class="card no-mb">
+        <h3>Source Efficiency — RPS by Top Sources ($)</h3>
+        <div class="ch-sm"><canvas id="sourceRPSChart"></canvas></div>
+        <div class="insight good">
+          <strong>mail.google.com: $16.01 RPS · $333 AOV</strong> from just 1,457 sessions.
+          The highest-efficiency source in the dataset — massively underutilised.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Source / Medium Performance Detail</h3>
+      <table>
+        <thead>
+          <tr><th>Source / Medium</th><th>Sessions</th><th>CR%</th><th>Revenue</th><th>RPS</th><th>AOV</th><th>Bounce%</th><th>Signal</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>(direct) / (none)</td><td>371,467</td><td>2.47%</td><td>$1,190,175</td><td>$3.20</td><td>$129.93</td><td>41.80%</td><td><span class="b b-g">PROTECT</span></td></tr>
+          <tr><td>google / organic</td><td>227,668</td><td>0.95%</td><td>$202,496</td><td>$0.89</td><td>$93.14</td><td>48.94%</td><td><span class="b b-y">INVESTIGATE</span></td></tr>
+          <tr><td>dfa / cpm</td><td>5,686</td><td>2.32%</td><td>$76,928</td><td class="hi">$13.53</td><td class="hi">$582.79</td><td>36.07%</td><td><span class="b b-g">PROTECT</span></td></tr>
+          <tr><td>google / cpc</td><td>13,078</td><td>1.90%</td><td>$25,177</td><td>$1.93</td><td>$101.52</td><td>37.01%</td><td><span class="b b-b">GROW</span></td></tr>
+          <tr><td><strong style="color:var(--green)">mail.google.com / referral</strong></td><td>1,457</td><td>4.80%</td><td>$23,328</td><td class="hi">$16.01</td><td>$333.26</td><td>37.54%</td><td><span class="b b-g">UNDERUTILISED</span></td></tr>
+          <tr><td>dealspotr.com / referral</td><td>528</td><td class="hi">7.58%</td><td>$5,691</td><td>$10.78</td><td>$142.27</td><td>51.33%</td><td><span class="b b-y">MONITOR</span></td></tr>
+          <tr><td>facebook.com / referral</td><td>2,296</td><td>1.09%</td><td>$1,138</td><td>$0.50</td><td>$45.51</td><td>52.09%</td><td><span class="b b-b">GROW</span></td></tr>
+          <tr><td>l.facebook.com / referral</td><td>795</td><td>3.77%</td><td>$1,044</td><td>$1.31</td><td>$34.79</td><td>63.14%</td><td><span class="b b-b">GROW</span></td></tr>
+          <tr><td>bing / organic</td><td>1,529</td><td>1.37%</td><td>$988</td><td>$0.65</td><td>$47.03</td><td>41.79%</td><td><span class="b b-y">MONITOR</span></td></tr>
+          <tr><td>Partners / affiliate</td><td>16,403</td><td>0.05%</td><td>$597</td><td class="lo">$0.04</td><td>$66.38</td><td>53.05%</td><td><span class="b b-r">CUT</span></td></tr>
+          <tr style="background:rgba(248,81,73,.05)"><td><strong style="color:var(--red)">youtube.com / referral</strong></td><td>212,602</td><td class="lo">0.01%</td><td>$314</td><td class="lo">$0.0015</td><td>$28.55</td><td>65.99%</td><td><span class="b b-r">REPOSITION</span></td></tr>
+        </tbody>
+      </table>
+      <div class="insight info">
+        <strong>dfa/cpm (Display) concentration risk:</strong> $582.79 AOV and $13.53 RPS from a single programmatic platform.
+        Any platform change removes the entire $76,928 contribution. Identify which campaigns produce the $582 buyer before scaling — then test a second platform.
+      </div>
+    </div>
+  </div>
+
+  <!-- =================== TAB 5: GEOGRAPHY =================== -->
+  <div id="tab-geo" class="tab-content">
+
+    <div class="g2">
+      <div class="card no-mb">
+        <h3>Revenue Concentration: US vs Rest of World</h3>
+        <div class="ch-sm"><canvas id="geoPieChart"></canvas></div>
+        <div class="insight bad">
+          <strong>94.3% of revenue comes from the United States.</strong>
+          A 10% US revenue decline loses $145,244 — more than the entire international portfolio generates.
+        </div>
+      </div>
+      <div class="card no-mb">
+        <h3>Conversion Rate by Country (%)</h3>
+        <div class="ch-sm"><canvas id="geoBarChart"></canvas></div>
+        <div class="insight info">
+          <strong>Puerto Rico converts at 1.50%</strong> — a US territory with US shipping and USD pricing.
+          The UK converts at 0.05%. This proves the UK's barrier is logistics, not brand interest.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Geographic Performance Detail</h3>
+      <table>
+        <thead>
+          <tr><th>Country</th><th>Sessions</th><th>CR%</th><th>Revenue</th><th>Rev %</th><th>RPS</th><th>AOV</th><th>Bounce%</th><th>Opportunity</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>🇺🇸 United States</td><td>364,744</td><td class="hi">3.14%</td><td><strong>$1,452,441</strong></td><td>94.3%</td><td>$3.98</td><td>$126.96</td><td>35.00%</td><td><span class="b b-g">BENCHMARK MARKET</span></td></tr>
+          <tr><td>🇨🇦 Canada</td><td>25,869</td><td>0.77%</td><td>$32,825</td><td>2.1%</td><td>$1.27</td><td>$164.95</td><td>36.84%</td><td><span class="b b-b">LOCALISE → +$61K</span></td></tr>
+          <tr><td>🇻🇪 Venezuela</td><td>2,132</td><td class="hi">7.18%</td><td>$13,375</td><td>0.9%</td><td>$6.27</td><td>$87.42</td><td>55.25%</td><td><span class="b b-y">INVESTIGATE</span></td></tr>
+          <tr><td>🇯🇵 Japan</td><td>19,731</td><td class="lo">0.09%</td><td>$6,729</td><td>0.4%</td><td>$0.34</td><td class="hi">$373.83</td><td>57.50%</td><td><span class="b b-b">LOCALISE → HIGH AOV</span></td></tr>
+          <tr><td>🇬🇧 United Kingdom</td><td>37,393</td><td class="lo">0.05%</td><td>$1,689</td><td>0.1%</td><td>$0.05</td><td>$88.92</td><td>61.11%</td><td><span class="b b-b">LOCALISE → +$104K</span></td></tr>
+          <tr><td>🇦🇺 Australia</td><td>12,698</td><td class="lo">0.10%</td><td>$1,745</td><td>0.1%</td><td>$0.14</td><td>$134.25</td><td>55.02%</td><td><span class="b b-y">MONITOR</span></td></tr>
+          <tr><td>🇵🇷 Puerto Rico</td><td>732</td><td>1.50%</td><td>$1,203</td><td>0.1%</td><td>$1.64</td><td>$109.35</td><td>38.66%</td><td><span class="b b-g">US LOGISTICS → CONVERTS</span></td></tr>
+          <tr><td>🇹🇼 Taiwan</td><td>12,996</td><td>0.15%</td><td>$1,921</td><td>0.1%</td><td>$0.15</td><td>$101.10</td><td>52.29%</td><td><span class="b b-y">MONITOR</span></td></tr>
+          <tr><td>🇲🇽 Mexico</td><td>13,225</td><td>0.15%</td><td>$1,593</td><td>0.1%</td><td>$0.12</td><td>$79.64</td><td>61.66%</td><td><span class="b b-y">MONITOR</span></td></tr>
+          <tr><td>🇧🇪 Belgium</td><td>4,442</td><td>0.11%</td><td>$992</td><td>0.1%</td><td>$0.22</td><td>$198.41</td><td>60.31%</td><td><span class="b b-y">MONITOR</span></td></tr>
+        </tbody>
+      </table>
+      <div class="insight info">
+        <strong>Japan: $373.83 AOV — nearly 3× the US average</strong> — with 0.09% conversion rate and 57.5% bounce.
+        Visitors arrive and immediately leave. Classic language barrier pattern. A Japanese-language checkout is the single highest-impact localisation investment available.
+      </div>
+    </div>
+  </div>
+
+  <!-- =================== TAB 6: ROI SCORECARD =================== -->
+  <div id="tab-roi" class="tab-content">
+
+    <div class="pri-cards">
+      <div class="pri p">
+        <h4>🟢 PROTECT</h4>
+        <div class="ch-name">Display · Referral</div>
+        <div class="ch-act">CR above 2% AND RPS above site average ($1.70). Scale Display carefully — identify the $515 AOV audience first. Grow Referral partnerships actively.</div>
+      </div>
+      <div class="pri g">
+        <h4>🔵 GROW</h4>
+        <div class="ch-name">Direct · Paid Search</div>
+        <div class="ch-act">CR approaching benchmark, RPS above average. Direct: invest in loyalty and retention. Paid Search: increase bids, apply negative mobile bid adjustments.</div>
+      </div>
+      <div class="pri i">
+        <h4>🟡 INVESTIGATE</h4>
+        <div class="ch-name">Organic Search</div>
+        <div class="ch-act">42% of sessions, 54% CR decline in 12 months. Content strategy reset toward transactional intent = $364K incremental revenue from existing traffic.</div>
+      </div>
+      <div class="pri c">
+        <h4>🔴 CUT / OPTIMISE</h4>
+        <div class="ch-name">Social (YouTube) · Affiliates</div>
+        <div class="ch-act">YouTube: reposition as brand awareness, not direct response. Facebook within Social: keep. Affiliates: 9 transactions in 12 months — pause immediately.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>ROI Scorecard — All Channels Ranked</h3>
+      <table>
+        <thead>
+          <tr><th>Priority</th><th>Channel</th><th>Sessions</th><th>CR%</th><th>Revenue</th><th>RPS</th><th>AOV</th><th>vs Site Avg RPS</th><th>vs 2% Benchmark</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="b b-g">🟢 PROTECT</span></td><td>Display</td><td>6,262</td><td class="hi">2.43%</td><td>$78,337</td><td class="hi">$12.51</td><td class="hi">$515.38</td><td class="pos">+636%</td><td class="pos">+22%</td></tr>
+          <tr><td><span class="b b-g">🟢 PROTECT</span></td><td>Referral</td><td>104,838</td><td class="hi">5.29%</td><td>$651,430</td><td class="hi">$6.21</td><td>$117.52</td><td class="pos">+265%</td><td class="pos">+165%</td></tr>
+          <tr><td><span class="b b-b">🔵 GROW</span></td><td>Direct</td><td>143,026</td><td>1.55%</td><td>$434,841</td><td>$3.04</td><td class="hi">$195.96</td><td class="pos">+79%</td><td class="neg">−23%</td></tr>
+          <tr><td><span class="b b-b">🔵 GROW</span></td><td>Paid Search</td><td>25,326</td><td>1.89%</td><td>$43,559</td><td>$1.72</td><td>$90.94</td><td class="pos">+1%</td><td class="neg">−6%</td></tr>
+          <tr><td><span class="b b-y">🟡 INVESTIGATE</span></td><td>Organic Search</td><td>381,561</td><td>0.94%</td><td>$326,381</td><td>$0.86</td><td>$91.14</td><td class="neg">−49%</td><td class="neg">−53%</td></tr>
+          <tr><td><span class="b b-r">🔴 CUT</span></td><td>Social</td><td>226,117</td><td class="lo">0.06%</td><td>$4,917</td><td class="lo">$0.02</td><td>$37.53</td><td class="neg">−99%</td><td class="neg">−97%</td></tr>
+          <tr><td><span class="b b-r">🔴 CUT</span></td><td>Affiliates</td><td>16,403</td><td class="lo">0.05%</td><td>$597</td><td class="lo">$0.04</td><td>$66.38</td><td class="neg">−98%</td><td class="neg">−98%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Quantified Revenue Opportunities</h3>
+      <div class="opp-grid">
+        <div class="opp">
+          <div class="amt">$364K</div>
+          <div class="desc">Organic Search CR: 0.94% → 2%<br>No new traffic needed. Content strategy reset.</div>
+        </div>
+        <div class="opp">
+          <div class="amt">$104K</div>
+          <div class="desc">UK localisation: fix shipping + pricing<br>From 37,393 existing UK sessions annually.</div>
+        </div>
+        <div class="opp">
+          <div class="amt">$571K</div>
+          <div class="desc">Site-wide +0.5pt CR improvement<br>~4,500 additional transactions at $127 AOV.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Budget Reallocation — Before vs After</h3>
+      <div class="ch-lg"><canvas id="budgetChart"></canvas></div>
+    </div>
+
+    <div class="rec">
+      <h3>💰 Executive Recommendation</h3>
+      <p>
+        <strong>Net principle:</strong> Moving budget from Social (YouTube-specific) and Affiliates to Paid Search and Display
+        shifts capital from channels generating <strong style="color:var(--red)">$0.02–$0.04 per session</strong>
+        to channels generating <strong style="color:var(--green)">$1.72–$12.51 per session</strong> —
+        reducing spend by approximately 20% while improving overall return on investment simultaneously.
+      </p>
+      <br>
+      <p>
+        The largest single opportunity is Organic Search: 42% of all traffic converting at 0.94% against a 2–4% benchmark.
+        Sessions grew 56% while conversion rate fell 54%. This is an intent-targeting problem, not a traffic volume problem.
+        No amount of additional spend on acquisition will fix a funnel that is leaking 98.7% of visitors.
+      </p>
+      <br>
+      <p style="color:var(--muted); font-size:.75rem;">
+        <strong>Limitations:</strong> Last-click attribution only — Social and Display assisted conversion value is understated.
+        No cost data available — RPS is an efficiency proxy, not true ROAS.
+        Referral and Organic have near-zero incremental media cost, which would improve their true ROI ranking further.
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Project 4 of 5 · E-Commerce Analytics Portfolio · Built by Sanduni K. ·
+  Tools: BigQuery Standard SQL · Google Analytics Public Dataset · HTML/Chart.js
+</footer>
+
+<script>
+// ===================== CHART DEFAULTS =====================
+Chart.defaults.color = '#8b949e';
+Chart.defaults.borderColor = '#30363d';
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+Chart.defaults.font.size = 11;
+
+const CH = {
+  referral:  '#3fb950',
+  direct:    '#58a6ff',
+  organic:   '#d29922',
+  display:   '#a371f7',
+  paid:      '#388bfd',
+  social:    '#f85149',
+  affiliate: '#8b949e'
+};
+
+// ===================== TAB SWITCHING =====================
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ===================== OVERVIEW CHARTS =====================
+
+// Revenue by Channel
+new Chart(document.getElementById('revenueChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Referral','Direct','Organic','Paid Search','Display','Social','Affiliates'],
+    datasets: [{
+      label: 'Revenue ($)',
+      data: [651430, 434841, 326381, 43559, 78337, 4917, 597],
+      backgroundColor: [CH.referral, CH.direct, CH.organic, CH.paid, CH.display, CH.social, CH.affiliate],
+      borderRadius: 4
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: {
+      callbacks: { label: ctx => ' $' + ctx.raw.toLocaleString() }
+    }},
+    scales: {
+      x: { grid: { color: 'rgba(48,54,61,.5)' }, ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'K' }},
+      y: { grid: { display: false }}
+    }
+  }
+});
+
+// Conversion Rate
+new Chart(document.getElementById('crChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Referral','Display','Paid Search','Direct','Organic','Social','Affiliates'],
+    datasets: [
+      {
+        label: 'CR%',
+        data: [5.29, 2.43, 1.89, 1.55, 0.94, 0.06, 0.05],
+        backgroundColor: [CH.referral, CH.display, CH.paid, CH.direct, CH.organic, CH.social, CH.affiliate],
+        borderRadius: 4
+      },
+      {
+        label: '2% Benchmark',
+        data: [2, 2, 2, 2, 2, 2, 2],
+        type: 'line',
+        borderColor: '#f85149',
+        borderDash: [4, 4],
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: false
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { boxWidth: 12, font: { size: 10 }}}},
+    scales: {
+      y: { grid: { color: 'rgba(48,54,61,.5)' }, ticks: { callback: v => v + '%' }},
+      x: { grid: { display: false }}
+    }
+  }
+});
+
+// RPS Chart
+new Chart(document.getElementById('rpsChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Display','Referral','Direct','Paid Search','Organic','Affiliates','Social'],
+    datasets: [
+      {
+        label: 'RPS ($)',
+        data: [12.51, 6.21, 3.04, 1.72, 0.86, 0.04, 0.02],
+        backgroundColor: [CH.display, CH.referral, CH.direct, CH.paid, CH.organic, CH.affiliate, CH.social],
+        borderRadius: 4
+      },
+      {
+        label: 'Site Avg $1.70',
+        data: [1.70, 1.70, 1.70, 1.70, 1.70, 1.70, 1.70],
+        type: 'line',
+        borderColor: '#58a6ff',
+        borderDash: [4, 4],
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: false
+      }
+    ]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { boxWidth: 12, font: { size: 10 }}}},
+    scales: {
+      x: { grid: { color: 'rgba(48,54,61,.5)' }, ticks: { callback: v => '$' + v }},
+      y: { grid: { display: false }}
+    }
+  }
+});
+
+// Sessions vs Revenue Gap
+new Chart(document.getElementById('gapChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Referral','Direct','Display','Paid Search','Organic','Affiliates','Social'],
+    datasets: [{
+      label: 'Gap (pts)',
+      data: [30.7, 12.4, 4.4, 0, -21.0, -1.76, -24.7],
+      backgroundColor: [CH.referral, CH.direct, CH.display, '#8b949e', CH.organic, '#8b949e', CH.social],
+      borderRadius: 4
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: {
+      callbacks: { label: ctx => ' ' + (ctx.raw > 0 ? '+' : '') + ctx.raw + ' pts' }
+    }},
+    scales: {
+      x: { grid: { color: 'rgba(48,54,61,.5)' }, ticks: { callback: v => (v > 0 ? '+' : '') + v + 'pts' }},
+      y: { grid: { display: false }}
+    }
+  }
+});
+
+// ===================== TREND CHARTS =====================
+const months = ['Aug 16','Sep 16','Oct 16','Nov 16','Dec 16','Jan 17','Feb 17','Mar 17','Apr 17','May 17','Jun 17','Jul 17'];
+
+new Chart(document.getElementById('trendCRChart'), {
+  type: 'line',
+  data: {
+    labels: months,
+    datasets: [
+      {
+        label: 'Organic Search',
+        data: [1.53, 0.92, 0.98, 0.95, 1.21, 0.74, 0.76, 0.91, 0.95, 0.93, 0.71, 0.83],
+        borderColor: CH.organic, backgroundColor: 'rgba(210,153,34,.1)',
+        tension: 0.3, fill: false, pointRadius: 3
+      },
+      {
+        label: 'Referral',
+        data: [4.80, 4.20, 3.90, 3.82, 6.74, 4.10, 3.95, 4.80, 5.20, 4.90, 5.50, 5.80],
+        borderColor: CH.referral, backgroundColor: 'rgba(63,185,80,.1)',
+        tension: 0.3, fill: false, pointRadius: 3
+      },
+      {
+        label: 'Paid Search',
+        data: [1.50, 1.40, 1.60, 1.70, 2.10, 1.18, 1.17, 1.80, 2.27, 1.90, 1.82, 2.52],
+        borderColor: CH.paid, backgroundColor: 'rgba(56,139,253,.1)',
+        tension: 0.3, fill: false, pointRadius: 3
+      },
+      {
+        label: 'Display',
+        data: [1.8, 2.0, 2.2, 2.1, 2.5, 1.9, 2.0, 2.2, 2.4, 2.1, 2.3, 2.4],
+        borderColor: CH.display, backgroundColor: 'rgba(163,113,247,.1)',
+        tension: 0.3, fill: false, pointRadius: 3
+      },
+      {
+        label: '2% Benchmark',
+        data: Array(12).fill(2),
+        borderColor: 'rgba(248,81,73,.5)', borderDash: [5, 5],
+        borderWidth: 1.2, pointRadius: 0, fill: false
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { boxWidth: 12, font: { size: 10 }}}},
+    scales: {
+      y: { grid: { color: 'rgba(48,54,61,.5)' }, ticks: { callback: v => v + '%' }},
+      x: { grid: { color: 'rgba(48,54,61,.3)' }}
+    }
+  }
+});
+
+new Chart(document.getElementById('trendRevenueChart'), {
+  type: 'line',
+  data: {
+    labels: months,
+    datasets: [
+      {
+        label: 'Referral Revenue',
+        data: [51000, 44000, 54000, 58000, 79775, 40000, 45000, 52000, 60000, 50000, 56000, 57000],
+        borderColor: CH.referral, backgroundColor: 'rgba(63,185,80,.08)',
+        tension: 0.3, fill: true, pointRadius: 3
+      },
+      {
+        label: 'Organic Revenue',
+        data: [40509, 27200, 28100, 26400, 25496, 18200, 19000, 27500, 28200, 26800, 28500, 29700],
+        borderColor: CH.organic, backgroundColor: 'rgba(210,153,34,.08)',
+        tension: 0.3, fill: true, pointRadius: 3
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { boxWidth: 12, font: { size: 10 }}}},
+    scales: {
+      y: { grid: { color: 'rgba(48,54,61,.5)' }, ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'K' }},
+      x: { grid: { color: 'rgba(48,54,61,.3)' }}
+    }
+  }
+});
+
+new Chart(document.getElementById('paidTrendChart'), {
+  type: 'line',
+  data: {
+    labels: months,
+    datasets: [
+      {
+        label: 'Paid Search CR%',
+        data: [1.50, 1.40, 1.60, 1.70, 2.10, 1.18, 1.17, 1.80, 2.27, 1.90, 1.82, 2.52],
+        borderColor: CH.paid, backgroundColor: 'rgba(56,139,253,.1)',
+        tension: 0.3, fill: true, pointRadius: 4
+      },
+      {
+        label: '2% Benchmark',
+        data: Array(12).fill(2),
+        borderColor: 'rgba(248,81,73,.5)', borderDash: [5, 5],
+        borderWidth: 1.2, pointRadius: 0, fill: false
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { boxWidth: 12, font: { size: 10 }}}},
+    scales: {
+      y: { grid: { color: 'rgba(48,54,61,.5)' }, ticks: { callback: v => v + '%' }, min: 0, max: 3.5 },
+      x: { grid: { color: 'rgba(48,54,61,.3)' }}
+    }
+  }
+});
+
+new Chart(document.getElementById('organicDualChart'), {
+  type: 'bar',
+  data: {
+    labels: months,
+    datasets: [
+      {
+        label: 'Monthly Sessions',
+        data: [24143, 29500, 31200, 30300, 32008, 28500, 30500, 32000, 34500, 34000, 36200, 37200],
+        backgroundColor: 'rgba(210,153,34,.25)',
+        borderColor: CH.organic,
+        borderWidth: 1,
+        yAxisID: 'y',
+        borderRadius: 2
+      },
+      {
+        label: 'Conversion Rate %',
+        data: [1.53, 0.92, 0.98, 0.95, 1.21, 0.74, 0.76, 0.91, 0.95, 0.93, 0.71, 0.83],
+        type: 'line',
+        borderColor: '#f85149',
+        backgroundColor: 'rgba(248,81,73,.08)',
+        tension: 0.3,
+        fill: false,
+        pointRadius: 4,
+        yAxisID: 'y1'
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { boxWidth: 12, font: { size: 10 }}}},
+    scales: {
+      y: {
+        grid: { color: 'rgba(48,54,61,.5)' },
+        ticks: { callback: v => v.toLocaleString() },
+        title: { display: true, text: 'Sessions', font: { size: 10 }, color: '#8b949e' }
+      },
+      y1: {
+        position: 'right',
+        grid: { display: false },
+        ticks: { callback: v => v + '%' },
+        title: { display: true, text: 'CR%', font: { size: 10 }, color: '#8b949e' },
+        min: 0, max: 2.5
+      },
+      x: { grid: { color: 'rgba(48,54,61,.3)' }}
+    }
+  }
+});
+
+// ===================== DEVICE CHARTS =====================
+new Chart(document.getElementById('deviceCRChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Referral','Display','Direct','Paid Search','Organic','Social'],
+    datasets: [
+      {
+        label: 'Desktop CR%',
+        data: [5.58, 3.11, 2.22, 2.91, 1.20, 0.06],
+        backgroundColor: 'rgba(88,166,255,.8)',
+        borderRadius: 3
+      },
+      {
+        label: 'Mobile CR%',
+        data: [0.20, 0.65, 0.46, 0.88, 0.44, 0.02],
+        backgroundColor: 'rgba(248,81,73,.7)',
+        borderRadius: 3
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { boxWidth: 12, font: { size: 10 }}}},
+    scales: {
+      y: { grid: { color: 'rgba(48,54,61,.5)' }, ticks: { callback: v => v + '%' }},
+      x: { grid: { display: false }}
+    }
+  }
+});
+
+// ===================== SOURCE CHARTS =====================
+new Chart(document.getElementById('ytPieChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['YouTube (94%)', 'Facebook & other (6%)'],
+    datasets: [{
+      data: [212602, 13515],
+      backgroundColor: [CH.social, '#388bfd'],
+      borderColor: '#161b22',
+      borderWidth: 3
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 }, padding: 14 }},
+      tooltip: { callbacks: { label: ctx => ' ' + ctx.label + ': ' + ctx.raw.toLocaleString() + ' sessions' }}
+    }
+  }
+});
+
+new Chart(document.getElementById('sourceRPSChart'), {
+  type: 'bar',
+  data: {
+    labels: ['mail.google.com','dfa / cpm','dealspotr.com','(direct)','google / cpc','l.facebook.com','google / organic','Partners / aff.','youtube.com'],
+    datasets: [{
+      label: 'Revenue Per Session ($)',
+      data: [16.01, 13.53, 10.78, 3.20, 1.93, 1.31, 0.89, 0.04, 0.0015],
+      backgroundColor: ['#3fb950','#a371f7','#3fb950','#58a6ff','#388bfd','#388bfd','#d29922','#8b949e','#f85149'],
+      borderRadius: 3
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: {
+      callbacks: { label: ctx => ' $' + ctx.raw }
+    }},
+    scales: {
+      x: { grid: { color: 'rgba(48,54,61,.5)' }, ticks: { callback: v => '$' + v }},
+      y: { grid: { display: false }, ticks: { font: { size: 9 }}}
+    }
+  }
+});
+
+// ===================== GEO CHARTS =====================
+new Chart(document.getElementById('geoPieChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['United States (94.3%)', 'Canada (2.1%)', 'Venezuela (0.9%)', 'All Others (2.7%)'],
+    datasets: [{
+      data: [1452441, 32825, 13375, 41430],
+      backgroundColor: ['#388bfd', '#3fb950', '#d29922', '#8b949e'],
+      borderColor: '#161b22',
+      borderWidth: 3
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 9 }, padding: 10 }},
+      tooltip: { callbacks: { label: ctx => ' $' + ctx.raw.toLocaleString() }}
+    }
+  }
+});
+
+new Chart(document.getElementById('geoBarChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Venezuela','USA','Puerto Rico','Canada','Bing/Organic','Japan','Australia','UK'],
+    datasets: [{
+      label: 'Conversion Rate %',
+      data: [7.18, 3.14, 1.50, 0.77, 1.37, 0.09, 0.10, 0.05],
+      backgroundColor: ['#3fb950','#388bfd','#3fb950','#d29922','#d29922','#f85149','#f85149','#f85149'],
+      borderRadius: 3
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }},
+    scales: {
+      x: { grid: { color: 'rgba(48,54,61,.5)' }, ticks: { callback: v => v + '%' }},
+      y: { grid: { display: false }, ticks: { font: { size: 9 }}}
+    }
+  }
+});
+
+// ===================== BUDGET CHART =====================
+new Chart(document.getElementById('budgetChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Display','Referral','Direct','Paid Search','Organic Search','Social','Affiliates'],
+    datasets: [
+      {
+        label: 'Current Budget Allocation (estimated %)',
+        data: [2, 5, 15, 10, 20, 35, 8],
+        backgroundColor: 'rgba(88,166,255,.5)',
+        borderRadius: 3
+      },
+      {
+        label: 'Recommended Allocation (estimated %)',
+        data: [12, 12, 15, 22, 25, 10, 2],
+        backgroundColor: 'rgba(63,185,80,.6)',
+        borderRadius: 3
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { boxWidth: 12, font: { size: 10 }}},
+      tooltip: { callbacks: { label: ctx => ' ' + ctx.dataset.label + ': ~' + ctx.raw + '%' }}
+    },
+    scales: {
+      y: { grid: { color: 'rgba(48,54,61,.5)' }, ticks: { callback: v => v + '%' }, title: { display: true, text: 'Estimated Budget Share', font: { size: 10 }, color: '#8b949e' }},
+      x: { grid: { display: false }}
+    }
+  }
+});
+</script>
+</body>
+</html>
