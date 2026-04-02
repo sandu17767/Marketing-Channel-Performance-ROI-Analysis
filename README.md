@@ -6,6 +6,10 @@
 
 **Scope:** 903,653 sessions · 8 marketing channels · 12 months
 
+🌐 Live Interactive Dashboard
+
+👉 https://sandu17767.github.io/Marketing-Channel-Performance-ROI-Analysis/
+
 ---
 
 ## 💡 Business Question
