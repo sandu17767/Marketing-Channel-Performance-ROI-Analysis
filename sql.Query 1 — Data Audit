@@ -1,0 +1,20 @@
+
+**Business question:** Is this data trustworthy and complete?  
+**Purpose:** Validates the dataset before any analysis. Confirms date range, total sessions, unique visitors, distinct channels, transactions, revenue, and the site-wide conversion rate.
+```sql
+SELECT
+  MIN(PARSE_DATE('%Y%m%d', date))                                     AS start_date,
+  MAX(PARSE_DATE('%Y%m%d', date))                                     AS end_date,
+  COUNT(*)                                                            AS total_sessions,
+  COUNT(DISTINCT fullVisitorId)                                       AS unique_visitors,
+  COUNT(DISTINCT channelGrouping)                                     AS distinct_channels,
+  SUM(totals.transactions)                                            AS total_transactions,
+  ROUND(SUM(totals.transactionRevenue) / 1000000, 2)                 AS total_revenue_usd,
+  COUNTIF(totals.transactions >= 1)                                   AS sessions_with_revenue,
+  COUNTIF(totals.transactions IS NULL OR totals.transactions = 0)    AS sessions_without_revenue,
+  ROUND(
+    COUNTIF(totals.transactions >= 1) / COUNT(*) * 100, 2
+  )                                                                   AS conversion_rate_pct
+FROM `bigquery-public-data.google_analytics_sample.ga_sessions_*`
+WHERE _TABLE_SUFFIX BETWEEN '20160801' AND '20170801';
+```
